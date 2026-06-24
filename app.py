@@ -20,8 +20,10 @@ os.makedirs(UPLOAD, exist_ok=True)
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "cambia-esto-en-produccion-2026")
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
-    "DATABASE_URL", "sqlite:///" + os.path.join(BASE, "instance", "minimarket.db"))
+_db_url = os.environ.get("DATABASE_URL", "sqlite:///" + os.path.join(BASE, "instance", "minimarket.db"))
+if _db_url.startswith("postgres://"):
+    _db_url = _db_url.replace("postgres://", "postgresql://", 1)
+app.config["SQLALCHEMY_DATABASE_URI"] = _db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024
 db.init_app(app)

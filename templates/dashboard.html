@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block h1 %}Dashboard{% endblock %}
+{% block content %}
+<div class="grid grid-4" style="margin-bottom:18px">
+  <div class="stat"><div class="label">Ventas hoy</div><div class="value ok">{{total_hoy|clp}}</div></div>
+  <div class="stat"><div class="label">Utilidad hoy</div><div class="value">{{util_hoy|clp}}</div></div>
+  <div class="stat"><div class="label">N° transacciones</div><div class="value">{{n_ventas}}</div></div>
+  <div class="stat"><div class="label">Stock bajo</div><div class="value {{'danger' if bajo_stock else ''}}">{{bajo_stock}}</div></div>
+</div>
+<div class="grid grid-2">
+  <div class="card">
+    <h2>Ventas últimos 7 días</h2>
+    <canvas id="chart" height="120"></canvas>
+  </div>
+  <div class="card">
+    <h2>Top productos (7 días)</h2>
+    {% if top %}<table><thead><tr><th>Producto</th><th class="right">Vendidos</th></tr></thead><tbody>
+    {% for t in top %}<tr><td>{{t[0]}}</td><td class="right">{{t[1]|round(0)|int}}</td></tr>{% endfor %}
+    </tbody></table>{% else %}<p class="muted">Sin ventas aún.</p>{% endif %}
+    <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border)">
+      <div class="row">
+        <div><span class="muted">Deuda en fiados:</span> <strong style="color:var(--warn)">{{deuda_total|clp}}</strong></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const s = {{serie|tojson}};
+new Chart(document.getElementById('chart'),{type:'bar',
+ data:{labels:s.map(x=>x.dia),datasets:[{label:'Ventas',data:s.map(x=>x.total),
+   backgroundColor:'#4f8cff',borderRadius:6}]},
+ options:{plugins:{legend:{display:false}},scales:{
+   y:{ticks:{color:'#94a3b8',callback:v=>'$'+v.toLocaleString('es-CL')},grid:{color:'#2d3850'}},
+   x:{ticks:{color:'#94a3b8'},grid:{display:false}}}}});
+</script>
+{% endblock %}

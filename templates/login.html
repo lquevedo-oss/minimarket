@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content_full %}
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg)">
+  <div style="width:380px">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:42px">🏪</div>
+      <h1 style="font-size:24px;margin-top:8px">Minimarket</h1>
+      <p class="muted">Sistema de gestión</p>
+    </div>
+    <div class="card">
+      {% with msgs = get_flashed_messages(with_categories=true) %}
+        {% for cat,msg in msgs %}<div class="flash {{cat}}">{{msg}}</div>{% endfor %}
+      {% endwith %}
+      <form method="post">
+        <label>Usuario</label>
+        <input name="username" autofocus required>
+        <label>Contraseña</label>
+        <input type="password" name="password" required>
+        <button class="btn" style="width:100%;margin-top:20px;justify-content:center">Ingresar</button>
+      </form>
+    </div>
+    <p class="muted center" style="font-size:12px;margin-top:14px">
+      Demo: admin/admin123 · vendedor/vend123</p>
+  </div>
+</div>
+{% endblock %}

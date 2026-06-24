@@ -101,14 +101,39 @@ def dashboard():
     ventas_hoy = Venta.query.filter(Venta.fecha >= inicio).all()
     total_hoy = sum(v.total for v in ventas_hoy)
     util_hoy = sum(v.utilidad for v in ventas_hoy)
+    n_ventas = len(ventas_hoy)
+
+    productos_vendidos = int(db.session.query(
+        func.coalesce(func.sum(VentaItem.cantidad), 0)
+    ).join(Venta).filter(Venta.fecha >= inicio).scalar() or 0)
+
     bajo_stock = Producto.query.filter(Producto.stock <= Producto.stock_min,
                                        Producto.activo == True).count()
+    bajo_stock_lista = (Producto.query
+                        .filter(Producto.stock <= Producto.stock_min, Producto.activo == True)
+                        .order_by(Producto.stock).limit(5).all())
     deuda_total = sum(c.deuda for c in Cliente.query.all())
-    top = (db.session.query(VentaItem.nombre, func.sum(VentaItem.cantidad).label("q"))
-           .join(Venta).filter(Venta.fecha >= inicio - timedelta(days=7))
-           .group_by(VentaItem.nombre).order_by(func.sum(VentaItem.cantidad).desc())
-           .limit(5).all())
-    # serie 7 días
+
+    top_raw = (db.session.query(VentaItem.nombre, func.sum(VentaItem.cantidad).label("q"))
+               .join(Venta).filter(Venta.fecha >= inicio - timedelta(days=7))
+               .group_by(VentaItem.nombre).order_by(func.sum(VentaItem.cantidad).desc())
+               .limit(5).all())
+    top = [(r[0], float(r[1])) for r in top_raw]
+    top_max = max((t[1] for t in top), default=1)
+
+    cat_raw = (db.session.query(Categoria.nombre, func.sum(VentaItem.cantidad * VentaItem.precio_unit).label("m"))
+               .join(Producto, VentaItem.producto_id == Producto.id)
+               .join(Categoria, Producto.categoria_id == Categoria.id)
+               .join(Venta, VentaItem.venta_id == Venta.id)
+               .filter(Venta.fecha >= inicio - timedelta(days=7))
+               .group_by(Categoria.nombre)
+               .order_by(func.sum(VentaItem.cantidad * VentaItem.precio_unit).desc())
+               .limit(5).all())
+    cat_ventas = [(r[0], float(r[1])) for r in cat_raw]
+    cat_total = sum(c[1] for c in cat_ventas) or 1
+
+    facturas_recientes = Factura.query.order_by(Factura.cargada.desc()).limit(4).all()
+
     serie = []
     for i in range(6, -1, -1):
         d = hoy - timedelta(days=i)
@@ -117,9 +142,17 @@ def dashboard():
         t = db.session.query(func.coalesce(func.sum(Venta.total), 0)).filter(
             Venta.fecha >= a, Venta.fecha < b).scalar()
         serie.append({"dia": d.strftime("%d/%m"), "total": float(t or 0)})
-    return render_template("dashboard.html", total_hoy=total_hoy, util_hoy=util_hoy,
-                           n_ventas=len(ventas_hoy), bajo_stock=bajo_stock,
-                           deuda_total=deuda_total, top=top, serie=serie)
+
+    return render_template("dashboard.html",
+                           total_hoy=total_hoy, util_hoy=util_hoy,
+                           n_ventas=n_ventas, bajo_stock=bajo_stock,
+                           bajo_stock_lista=bajo_stock_lista,
+                           deuda_total=deuda_total,
+                           top=top, top_max=top_max,
+                           cat_ventas=cat_ventas, cat_total=cat_total,
+                           facturas_recientes=facturas_recientes,
+                           productos_vendidos=productos_vendidos,
+                           serie=serie)
 
 
 # ---------- POS / ventas ----------
